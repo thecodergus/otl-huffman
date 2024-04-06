@@ -11,25 +11,27 @@ import Data.Maybe(fromMaybe)
 -- Calcula a frequência dos símbolos em uma string e converte para uma lista de Huffman
 freqSimb :: String -> [Huffman]
 freqSimb = convert . freq
+  where
+    -- Calcula a frequência dos caracteres em uma string
+    freq :: String -> [(Char, Int)]
+    freq = toList . fromListWith (+) . map (flip (,) 1)
 
--- Calcula a frequência dos caracteres em uma string
-freq :: String -> [(Char, Int)]
-freq = toList . fromListWith (+) . map (flip (,) 1)
+    -- Converte uma lista de tuplas (caractere, frequência) em uma lista de Huffman
+    convert :: [(Char, Int)] -> [Huffman]
+    convert = map (\(a, b) -> Folha b a) . sortBy (compare `on` snd)
 
--- Converte uma lista de tuplas (caractere, frequência) em uma lista de Huffman
-convert :: [(Char, Int)] -> [Huffman]
-convert = map (\(a, b) -> Folha b a) . sortBy (compare `on` snd)
-
--- Obtém o peso de um nó Huffman
-weight :: Huffman -> Int
-weight (Folha w _) = w
-weight (No w _ _) = w
 
 -- Constrói uma árvore Huffman a partir de uma lista de Huffman
 construirArvore :: [Huffman] -> Huffman
 construirArvore [] = error "Lista vazia"
 construirArvore [t] = t
 construirArvore (a : b : cs) = construirArvore $ insertBy (compare `on` weight) (No (weight a + weight b) a b) cs
+  where
+    -- Obtém o peso de um nó Huffman
+    weight :: Huffman -> Int
+    weight (Folha w _) = w
+    weight (No w _ _) = w
+
 
 -- Mapeia os caracteres para seus códigos Huffman
 codHumman :: Huffman -> [(Char, String)]
