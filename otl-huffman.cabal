@@ -65,6 +65,7 @@ executable otl-huffman
     other-modules:
                     Types
                     Algorithms
+                    File
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
