@@ -2,8 +2,6 @@ module Types where
 
 data Huffman = Folha Int Char | No Int Huffman Huffman deriving (Show, Eq)
 
-
-
 -- Função para comparar dois nós Huffman com base em sua frequência
 compararHuffman :: Huffman -> Huffman -> Ordering
 compararHuffman (Folha freq1 _) (Folha freq2 _) = compare freq1 freq2
