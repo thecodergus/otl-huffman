@@ -44,9 +44,8 @@ codificar s h = concatMap (`lookup'` cod) s
   where
     -- Mapeia os caracteres para seus códigos Huffman
     cod = codHumman h
-
+    
     -- Função complementar para fazer a busca de um caractere no mapeamento
-    lookup' :: a -> [(a, c)] -> c
     lookup' c = fromMaybe (error "Caractere não encontrado") . lookup c
 
 -- Decodifica uma string usando a árvore Huffman
