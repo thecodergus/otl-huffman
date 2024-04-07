@@ -47,13 +47,11 @@ codificar s h = concatMap (`lookup'` cod) s
 
 -- Decodifica uma string usando a árvore Huffman
 decodificar :: String -> Huffman -> String
-decodificar s h = decodificar' s h
+decodificar str arv = decodificar' str arv
   where
     decodificar' :: String -> Huffman -> String
     decodificar' [] _ = []
-    decodificar' s' h' = case h' of
-      (No _ e d) -> case s' of
-        ('0' : ss) -> decodificar' ss e
-        ('1' : ss) -> decodificar' ss d
-        _ -> error "Código inválido"
-      (Folha _ c) -> c : decodificar' s' h
+    decodificar' ('0' : ss) (No _ e d) = decodificar' ss e
+    decodificar' ('1' : ss) (No _ e d) = decodificar' ss d
+    decodificar' str' (Folha _ c) = c : decodificar' str' arv
+
