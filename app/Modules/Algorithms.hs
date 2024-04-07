@@ -42,13 +42,21 @@ codHumman (No _ e d) = map (second ('0' :)) (codHumman e) ++ map (second ('1' :)
 codificar :: String -> Huffman -> String
 codificar s h = concatMap (`lookup'` cod) s
   where
+    -- Mapeia os caracteres para seus códigos Huffman
     cod = codHumman h
+
+    -- Função complementar para fazer a busca de um caractere no mapeamento
+    lookup' :: a -> [(a, c)] -> c
     lookup' c = fromMaybe (error "Caractere não encontrado") . lookup c
 
 -- Decodifica uma string usando a árvore Huffman
 decodificar :: String -> Huffman -> String
 decodificar str arv = decodificar' str arv
   where
+    -- Função complementar para decodificar uma string usando a árvore Huffman
+    -- esta função é recursiva e é chamada pela função decodificar
+    -- ela percorre a árvore Huffman de acordo com a string de entrada
+    -- e retorna a string decodificada
     decodificar' :: String -> Huffman -> String
     decodificar' ('0' : xstr) (No _ esq _) = decodificar' xstr esq
     decodificar' ('1' : xstr) (No _ _ dir) = decodificar' xstr dir
