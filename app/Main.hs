@@ -7,9 +7,11 @@ main :: IO ()
 main = do
 
     -- Codificando e decodificando com Huffman
-    let texto = "Gustavo Michels de Camargo"
+    let texto = "Gustavo"
 
     let arvore = construirArvore $ freqSimb texto
+
+    print arvore
 
     let textoCompactado = codificar texto $ arvore
 
@@ -21,7 +23,7 @@ main = do
 
     putStrLn $ "Texto decodificado: " ++ textoDecodificado
 
-    
+
     -- -- Compacta o arquivo
     -- putStrLn "Compactando arquivo..."
     -- compactarArquivo "teste.txt"
