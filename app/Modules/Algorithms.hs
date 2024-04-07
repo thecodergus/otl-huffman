@@ -50,8 +50,8 @@ decodificar :: String -> Huffman -> String
 decodificar str arv = decodificar' str arv
   where
     decodificar' :: String -> Huffman -> String
-    decodificar' ('0' : ss) (No _ e d) = decodificar' ss e
-    decodificar' ('1' : ss) (No _ e d) = decodificar' ss d
+    decodificar' ('0' : xstr) (No _ esq _) = decodificar' xstr esq
+    decodificar' ('1' : xstr) (No _ _ dir) = decodificar' xstr dir
     decodificar' [] (Folha _ c) = [c]
     decodificar' str' (Folha _ c) = c : decodificar' str' arv
 
