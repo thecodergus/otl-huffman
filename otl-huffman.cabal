@@ -66,13 +66,16 @@ executable otl-huffman
                     Types
                     Algorithms
                     File
+                    Binary
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
     build-depends:      base ^>=4.17.2.1,
-                        containers
+                        containers,
+                        binary,
+                        bytestring
                     
 
     -- Directories containing source files.

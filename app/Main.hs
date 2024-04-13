@@ -1,7 +1,7 @@
 module Main where
 -- import File (descompactarArquivo, compactarArquivo)
 import Algorithms
-import Algorithms (codificar)
+    ( freqSimb, construirArvore, codificar, decodificar )
 
 main :: IO ()
 main = do
@@ -11,7 +11,7 @@ main = do
 
     let arvore = construirArvore $ freqSimb texto
 
-    print arvore
+    -- print $ arvore
 
     let textoCompactado = codificar texto $ arvore
 
