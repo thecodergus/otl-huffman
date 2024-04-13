@@ -44,7 +44,7 @@ codificar s h = concatMap (`lookup'` cod) s
   where
     -- Mapeia os caracteres para seus códigos Huffman
     cod = codHumman h
-    
+
     -- Função complementar para fazer a busca de um caractere no mapeamento
     lookup' c = fromMaybe (error "Caractere não encontrado") . lookup c
 
@@ -61,6 +61,7 @@ decodificar str arv = decodificar' str arv
     decodificar' ('1' : xstr) (No _ _ dir) = decodificar' xstr dir
     decodificar' [] (Folha _ c) = [c]
     decodificar' str' (Folha _ c) = c : decodificar' str' arv
-    decodificar' _ _ = error "Input Invalido"
-    
+    decodificar' (p:_) (No {}) = error $ "Caractere inválido: " ++ [p]
+    decodificar'  [] (No {}) = error "Input Invalido"
+
 
