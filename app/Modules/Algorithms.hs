@@ -61,4 +61,6 @@ decodificar str arv = decodificar' str arv
     decodificar' ('1' : xstr) (No _ _ dir) = decodificar' xstr dir
     decodificar' [] (Folha _ c) = [c]
     decodificar' str' (Folha _ c) = c : decodificar' str' arv
+    decodificar' _ _ = error "Input Invalido"
+    
 
