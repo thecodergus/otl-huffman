@@ -20,7 +20,7 @@ encode arquivo = do
 decode :: String -> String -> IO ()
 decode file treeFile = do
   tree' <- readFile treeFile
-  let tree = read tree':: Huffman
+  let tree = bitstreamToHuffman $ byteStringToBitstream $ read tree'
   texto <- BS.readFile file
   let decoded = getString tree $ concatMap wordToBit (BS.unpack texto)
   writeFile file decoded

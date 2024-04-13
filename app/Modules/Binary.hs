@@ -99,3 +99,18 @@ bitstreamToByteString bits = bsts (extendToMultipleOfWordSize bits) []
     -- Caso recursivo: processa os bits em grupos de wordSize e converte cada grupo em um byte usando bitToWord.
     bsts b s =
         bsts (drop wordSize b) (s ++ [bitToWord (take wordSize b)])
+
+-- Converte uma ByteString em uma lista de bits.
+byteStringToBitstream :: BS.ByteString -> [Bit]
+byteStringToBitstream bs = concatMap wordToBit (BS.unpack bs)
+
+-- Convertendo uma lista de bits em uma string de 0s e 1s
+bitstreamToString :: [Bit] -> String
+bitstreamToString = map bitToChar
+  where
+    bitToChar Zero = '0'
+    bitToChar One = '1'
+
+-- Converte Bitstream em uma arvore de Huffman
+bitstreamToHuffman :: [Bit] -> Huffman
+bitstreamToHuffman = read . bitstreamToString
