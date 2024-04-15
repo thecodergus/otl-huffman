@@ -62,7 +62,7 @@ encode arquivo = do
         Put.putWord32be $ toEnum totalCaracteres
 
         escreverSimbolos simbolos
-        -- escreverCodigos arvore Map.empty
+        escreverCodigos arvore (gerarCodigos arvore)
 
       -- | Escreve as informações dos símbolos no arquivo binário.
       escreverSimbolos :: [Huffman] -- ^ A lista de Huffman.
@@ -76,25 +76,27 @@ encode arquivo = do
         escreverSimbolos hs
 
       -- | Escreve os códigos dos símbolos no arquivo binário.
-      escreverCodigos :: Huffman              -- ^ A árvore de Huffman.
-                      -> Map Char ByteString -- ^ O mapa de códigos dos símbolos.
-                      -> Put                  -- ^ Ação Put que escreve os códigos dos símbolos.
+      escreverCodigos :: Huffman -> Map Char ByteString -> Put
       escreverCodigos (Folha _ simbolo) codigos = do
         let codigo = Map.findWithDefault (error "Símbolo não encontrado") simbolo codigos
         Put.putWord8 $ fromIntegral $ ord simbolo
         Put.putWord8 $ fromIntegral $ ByteString.length codigo
         Put.putByteString codigo
-      escreverCodigos (No _ (Folha _ simbolo) direita) codigos = do
-        let novosCodigos = Map.insertWith (<>) simbolo (ByteString.singleton $ fromIntegral $ ord '0') codigos
-        escreverCodigos direita novosCodigos
-        escreverCodigos direita novosCodigos
-      escreverCodigos (No _ esquerda (Folha _ simbolo)) codigos = do
-        let novosCodigos = Map.insertWith (<>) simbolo (ByteString.singleton $ fromIntegral $ ord '1') codigos
-        escreverCodigos esquerda novosCodigos
-        escreverCodigos esquerda novosCodigos
       escreverCodigos (No _ esquerda direita) codigos = do
-        escreverCodigos esquerda codigos
-        escreverCodigos direita codigos
+        let codigosEsquerda = Map.map (ByteString.cons $ fromIntegral $ ord '0') codigos
+        let codigosDireita = Map.map (ByteString.cons $ fromIntegral $ ord '1') codigos
+        escreverCodigos esquerda codigosEsquerda
+        escreverCodigos direita codigosDireita
+
+      gerarCodigos :: Huffman -> Map Char ByteString
+      gerarCodigos huff = gerarCodigos' huff ByteString.empty
+        where
+          gerarCodigos' (Folha _ simbolo) codigo = Map.singleton simbolo codigo
+          gerarCodigos' (No _ esquerda direita) codigo = 
+            Map.union (gerarCodigos' esquerda (ByteString.append codigo (ByteString.singleton $ c2w '0')))
+                      (gerarCodigos' direita (ByteString.append codigo (ByteString.singleton $ c2w '1')))
+
+
 
 
 decode :: String -> IO ()
