@@ -6,13 +6,14 @@ import Types
 import Data.Binary (Put, Get)
 import qualified Data.ByteString.Lazy as Lazy
 import qualified Data.Binary.Put as Put
-import Data.Char (ord)
-import qualified Data.Map (Map)
-import Data.ByteString (ByteString)
+import Data.Char (ord, chr)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as ByteString
 import qualified Data.Map as Map
 import Data.Map (Map)
+import qualified Data.Binary as Get
+import qualified Data.Binary.Get as Get
+import Data.ByteString.Internal (c2w)
 
 
 
@@ -32,8 +33,13 @@ encode :: String -- ^ O caminho do arquivo a ser codificado.
 encode arquivo = do
   texto <- readFile arquivo
   let freqSimbolos = freqSimb texto
+  putStrLn $ "Frequencia de simbolos: "  ++ show (length freqSimbolos)
   let totalCaracteres = somarCaracteres freqSimbolos
+  putStrLn $ "Total de caracteres: " ++ show totalCaracteres
   let huff = construirArvore freqSimbolos
+
+  putStrLn $ "Frequencia de simbolos: " ++ show freqSimbolos
+  putStrLn $ "Arvore de Huffman: " ++ show huff
 
   let arquivoBin = Put.runPut $ escreverArquivo (length freqSimbolos) totalCaracteres freqSimbolos huff
   Lazy.writeFile (arquivo ++ ".bin") arquivoBin
@@ -51,18 +57,13 @@ encode arquivo = do
                      -> [Huffman]   -- ^ A lista de Huffman.
                      -> Huffman     -- ^ A árvore de Huffman.
                      -> Put         -- ^ Ação Put que escreve as informações do arquivo binário.
-      escreverArquivo totalFrequenciaSimbolos totalCaracteres [] arvore = do
-        Put.putWord8 $ fromIntegral totalFrequenciaSimbolos
-        Put.putWord32be $ fromIntegral totalCaracteres
-        
-        escreverCodigos arvore Map.empty
-      
-      escreverArquivo totalFrequenciaSimbolos totalCaracteres simbolos _ = do
-        Put.putWord8 $ fromIntegral totalFrequenciaSimbolos
-        Put.putWord32be $ fromIntegral totalCaracteres
+      escreverArquivo totalFrequenciaSimbolos totalCaracteres simbolos arvore = do
+        Put.putWord8 $ toEnum totalFrequenciaSimbolos
+        Put.putWord32be $ toEnum totalCaracteres
 
         escreverSimbolos simbolos
-          
+        -- escreverCodigos arvore Map.empty
+
       -- | Escreve as informações dos símbolos no arquivo binário.
       escreverSimbolos :: [Huffman] -- ^ A lista de Huffman.
                        -> Put       -- ^ Ação Put que escreve as informações dos símbolos.
@@ -94,3 +95,29 @@ encode arquivo = do
       escreverCodigos (No _ esquerda direita) codigos = do
         escreverCodigos esquerda codigos
         escreverCodigos direita codigos
+
+
+decode :: String -> IO ()
+decode arquivo = do
+  arquivoBin <- Lazy.readFile arquivo
+  let (totalFrequenciaSimbolos, totalCaracteres, simbolos) = Get.runGet decodificarBinario arquivoBin
+  
+  print totalFrequenciaSimbolos
+  print totalCaracteres
+  print simbolos
+  
+  where
+    decodificarBinario :: Get (Get.Word8, Get.Word32, [(Int, Char)])
+    decodificarBinario = do
+      totalFrequenciaSimbolos <- Get.getWord8
+      totalCaracteres <- Get.getWord32be
+      simbolos <- lerArquivo $ fromIntegral totalFrequenciaSimbolos
+      return (totalFrequenciaSimbolos, totalCaracteres, simbolos)
+
+    lerArquivo :: Int -> Get [(Int, Char)]
+    lerArquivo 0 = return []
+    lerArquivo n = do
+      simbolo <- Get.getWord8
+      freq <- Get.getWord32be
+      resto <- lerArquivo (n - 1)
+      return $ (fromIntegral freq, chr $ fromIntegral simbolo) : resto

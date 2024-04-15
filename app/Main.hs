@@ -30,6 +30,6 @@ main = do
     putStrLn "Arquivo compactado com sucesso!"
     
     -- Descompacta o arquivo
-    -- putStrLn "Descompactando arquivo..."
-    -- decode "teste.txt.out" "teste.txt.arvore"
-    -- putStrLn "Arquivo descompactado com sucesso!"
+    putStrLn "Descompactando arquivo..."
+    decode "teste.txt.bin"
+    putStrLn "Arquivo descompactado com sucesso!"
