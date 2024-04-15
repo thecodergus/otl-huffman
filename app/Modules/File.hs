@@ -33,13 +33,13 @@ encode :: String -- ^ O caminho do arquivo a ser codificado.
 encode arquivo = do
   texto <- readFile arquivo
   let freqSimbolos = freqSimb texto
-  putStrLn $ "Frequencia de simbolos: "  ++ show (length freqSimbolos)
+  putStrLn $ "(encode)Frequencia de simbolos: "  ++ show (length freqSimbolos)
   let totalCaracteres = somarCaracteres freqSimbolos
-  putStrLn $ "Total de caracteres: " ++ show totalCaracteres
+  putStrLn $ "(encode)Total de caracteres: " ++ show totalCaracteres
   let huff = construirArvore freqSimbolos
 
-  putStrLn $ "Frequencia de simbolos: " ++ show freqSimbolos
-  putStrLn $ "Arvore de Huffman: " ++ show huff
+  putStrLn $ "(encode)Frequencia de simbolos: " ++ show freqSimbolos
+  putStrLn $ "(encode)Arvore de Huffman: " ++ show huff
 
   let arquivoBin = Put.runPut $ escreverArquivo (length freqSimbolos) totalCaracteres freqSimbolos huff
   Lazy.writeFile (arquivo ++ ".bin") arquivoBin
@@ -104,10 +104,10 @@ decode arquivo = do
   arquivoBin <- Lazy.readFile arquivo
   let (totalFrequenciaSimbolos, totalCaracteres, simbolos, huff) = Get.runGet decodificarBinario arquivoBin
 
-  print totalFrequenciaSimbolos
-  print totalCaracteres
-  print simbolos
-  print huff
+  putStrLn $ "(decode)Total de frequência de símbolos: " ++ show totalFrequenciaSimbolos
+  putStrLn $ "(decode)Total de caracteres: " ++ show totalCaracteres
+  putStrLn $ "(decode)Frequência de símbolos: " ++ show simbolos
+  putStrLn $ "(decode)Arvore de Huffman: " ++ show huff
 
   let textoDecodificado = decodificarTexto (fromIntegral totalCaracteres) huff arquivoBin
 
