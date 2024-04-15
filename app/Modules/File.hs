@@ -35,7 +35,7 @@ encode arquivo = do
   let totalCaracteres = somarCaracteres freqSimbolos
   let huff = construirArvore freqSimbolos
 
-  let arquivoBin = Put.runPut $ escreverArquivo (length freqSimbolos) totalCaracteres freqSimbolos huff
+  let arquivoBin = Put.runPut $ escreverArquivo (length freqSimbolos) totalCaracteres freqSimbolos huff (codificar texto huff)
   Lazy.writeFile (arquivo ++ ".bin") arquivoBin
 
     where
@@ -50,18 +50,27 @@ encode arquivo = do
                      -> Int         -- ^ O total de caracteres no texto original.
                      -> [Huffman]   -- ^ A lista de Huffman.
                      -> Huffman     -- ^ A árvore de Huffman.
+                     -> String      -- ^ O texto codificado.
                      -> Put         -- ^ Ação Put que escreve as informações do arquivo binário.
-      escreverArquivo totalFrequenciaSimbolos totalCaracteres [] arvore = do
+      escreverArquivo totalFrequenciaSimbolos totalCaracteres [] arvore _ = do
         Put.putWord8 $ fromIntegral totalFrequenciaSimbolos
         Put.putWord32be $ fromIntegral totalCaracteres
         
         escreverCodigos arvore Map.empty
       
-      escreverArquivo totalFrequenciaSimbolos totalCaracteres simbolos _ = do
+      escreverArquivo totalFrequenciaSimbolos totalCaracteres simbolos _ textoCodificado = do
+        escreverTextoCodificado textoCodificado
+
         Put.putWord8 $ fromIntegral totalFrequenciaSimbolos
         Put.putWord32be $ fromIntegral totalCaracteres
 
         escreverSimbolos simbolos
+
+      escreverTextoCodificado :: String -> Put
+      escreverTextoCodificado texto = do
+        Put.putWord8 $ fromIntegral $ length texto
+        Put.putByteString $ ByteString.pack $ map (fromIntegral . ord) texto
+      
           
       -- | Escreve as informações dos símbolos no arquivo binário.
       escreverSimbolos :: [Huffman] -- ^ A lista de Huffman.
