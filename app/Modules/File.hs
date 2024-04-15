@@ -99,7 +99,16 @@ encode arquivo = do
 
 
 
-decode :: String -> IO ()
+-- | Função responsável por decodificar um arquivo comprimido usando o algoritmo de Huffman.
+-- A função recebe o caminho do arquivo a ser decodificado e realiza as seguintes etapas:
+-- 1. Lê o arquivo binário.
+-- 2. Extrai as informações necessárias do cabeçalho do arquivo.
+-- 3. Decodifica o texto comprimido usando a árvore de Huffman.
+-- 4. Escreve o texto decodificado em um novo arquivo.
+--
+-- A função retorna um valor do tipo `IO ()`, indicando que a operação é realizada no contexto de I/O.
+decode :: String  -- ^ O caminho do arquivo a ser decodificado.
+       -> IO ()   -- ^ Ação que realiza a decodificação do arquivo.
 decode arquivo = do
   arquivoBin <- Lazy.readFile arquivo
   let (totalFrequenciaSimbolos, totalCaracteres, simbolos, huff) = Get.runGet decodificarBinario arquivoBin
@@ -116,6 +125,7 @@ decode arquivo = do
   Lazy.writeFile (arquivo ++ ".txt") $ Lazy.pack $ map (fromIntegral . ord) textoDecodificado
 
   where
+    -- | Função auxiliar que realiza a decodificação do arquivo binário.
     decodificarBinario :: Get (Get.Word8, Get.Word32, [(Int, Char)], Huffman)
     decodificarBinario = do
       totalFrequenciaSimbolos <- Get.getWord8
@@ -125,6 +135,7 @@ decode arquivo = do
 
       return (totalFrequenciaSimbolos, totalCaracteres, simbolos, huff)
 
+    -- | Função auxiliar que lê os símbolos e suas frequências do arquivo binário.
     lerArquivo :: Int -> Get [(Int, Char)]
     lerArquivo 0 = return []
     lerArquivo n = do
@@ -133,8 +144,7 @@ decode arquivo = do
       resto <- lerArquivo (n - 1)
       return $ (fromIntegral freq, chr $ fromIntegral simbolo) : resto
 
-
-    -- \| Lê os códigos dos símbolos do arquivo binário.
+    -- | Função auxiliar que lê os códigos dos símbolos do arquivo binário.
     lerCodigos :: Get (Huffman, Map Char ByteString)
     lerCodigos = do
       simbolo <- Get.getWord8
@@ -152,15 +162,25 @@ decode arquivo = do
         weight (Folha w _) = w
         weight (No w _ _) = w
 
-    decodificarTexto :: Int -> Huffman -> Lazy.ByteString -> String
+    -- | Função auxiliar que decodifica o texto comprimido usando a árvore de Huffman.
+    decodificarTexto :: Int               -- ^ O número total de caracteres a serem decodificados.
+                     -> Huffman          -- ^ A árvore de Huffman.
+                     -> Lazy.ByteString  -- ^ O texto comprimido em formato binário.
+                     -> String           -- ^ O texto decodificado.
     decodificarTexto totalCaracteres huff arquivoBin = decodificarTexto' totalCaracteres huff arquivoBin
       where
-        decodificarTexto' :: Int -> Huffman -> Lazy.ByteString -> String
+        decodificarTexto' :: Int               -- ^ O número total de caracteres a serem decodificados.
+                          -> Huffman          -- ^ A árvore de Huffman.
+                          -> Lazy.ByteString  -- ^ O texto comprimido em formato binário.
+                          -> String           -- ^ O texto decodificado.
         decodificarTexto' 0 _ _ = ""
         decodificarTexto' n huff' arquivoBin' = case decodificarCaractere huff' arquivoBin' of
           (caractere, resto) -> caractere : decodificarTexto' (n - 1) huff' resto
 
-    decodificarCaractere :: Huffman -> Lazy.ByteString -> (Char, Lazy.ByteString)
+    -- | Função auxiliar que decodifica um caractere usando a árvore de Huffman.
+    decodificarCaractere :: Huffman          -- ^ A árvore de Huffman.
+                         -> Lazy.ByteString  -- ^ O texto comprimido em formato binário.
+                         -> (Char, Lazy.ByteString)  -- ^ O caractere decodificado e o restante do texto.
     decodificarCaractere (Folha _ simbolo) arquivoBin = (simbolo, arquivoBin)
     decodificarCaractere (No _ esquerda direita) arquivoBin = case Lazy.head arquivoBin of
       0 -> decodificarCaractere esquerda (Lazy.tail arquivoBin)
