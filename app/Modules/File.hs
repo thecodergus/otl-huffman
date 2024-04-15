@@ -92,7 +92,7 @@ encode arquivo = do
       gerarCodigos huff = gerarCodigos' huff ByteString.empty
         where
           gerarCodigos' (Folha _ simbolo) codigo = Map.singleton simbolo codigo
-          gerarCodigos' (No _ esquerda direita) codigo = 
+          gerarCodigos' (No _ esquerda direita) codigo =
             Map.union (gerarCodigos' esquerda (ByteString.append codigo (ByteString.singleton $ c2w '0')))
                       (gerarCodigos' direita (ByteString.append codigo (ByteString.singleton $ c2w '1')))
 
@@ -102,19 +102,28 @@ encode arquivo = do
 decode :: String -> IO ()
 decode arquivo = do
   arquivoBin <- Lazy.readFile arquivo
-  let (totalFrequenciaSimbolos, totalCaracteres, simbolos) = Get.runGet decodificarBinario arquivoBin
-  
+  let (totalFrequenciaSimbolos, totalCaracteres, simbolos, huff) = Get.runGet decodificarBinario arquivoBin
+
   print totalFrequenciaSimbolos
   print totalCaracteres
   print simbolos
-  
+  print huff
+
+  let textoDecodificado = decodificarTexto (fromIntegral totalCaracteres) huff arquivoBin
+
+  putStrLn $ "Texto decodificado: " ++ textoDecodificado
+
+  Lazy.writeFile (arquivo ++ ".txt") $ Lazy.pack $ map (fromIntegral . ord) textoDecodificado
+
   where
-    decodificarBinario :: Get (Get.Word8, Get.Word32, [(Int, Char)])
+    decodificarBinario :: Get (Get.Word8, Get.Word32, [(Int, Char)], Huffman)
     decodificarBinario = do
       totalFrequenciaSimbolos <- Get.getWord8
       totalCaracteres <- Get.getWord32be
       simbolos <- lerArquivo $ fromIntegral totalFrequenciaSimbolos
-      return (totalFrequenciaSimbolos, totalCaracteres, simbolos)
+      (huff, _) <- lerCodigos -- Adicionado aqui
+
+      return (totalFrequenciaSimbolos, totalCaracteres, simbolos, huff)
 
     lerArquivo :: Int -> Get [(Int, Char)]
     lerArquivo 0 = return []
@@ -123,3 +132,37 @@ decode arquivo = do
       freq <- Get.getWord32be
       resto <- lerArquivo (n - 1)
       return $ (fromIntegral freq, chr $ fromIntegral simbolo) : resto
+
+
+    -- \| Lê os códigos dos símbolos do arquivo binário.
+    lerCodigos :: Get (Huffman, Map Char ByteString)
+    lerCodigos = do
+      simbolo <- Get.getWord8
+      tamanhoCodigo <- Get.getWord8
+      codigo <- Get.getByteString $ fromIntegral tamanhoCodigo
+      let huff = Folha (ByteString.length codigo) (chr $ fromIntegral simbolo)
+      let codigos = Map.singleton (chr $ fromIntegral simbolo) codigo
+      if simbolo == 0 && tamanhoCodigo == 0
+        then return (huff, codigos)
+        else do
+          (huffResto, codigosResto) <- lerCodigos
+          return (No (weight huff + weight huffResto) huff huffResto, Map.union codigos codigosResto)
+      where
+        weight :: Huffman -> Int
+        weight (Folha w _) = w
+        weight (No w _ _) = w
+
+    decodificarTexto :: Int -> Huffman -> Lazy.ByteString -> String
+    decodificarTexto totalCaracteres huff arquivoBin = decodificarTexto' totalCaracteres huff arquivoBin
+      where
+        decodificarTexto' :: Int -> Huffman -> Lazy.ByteString -> String
+        decodificarTexto' 0 _ _ = ""
+        decodificarTexto' n huff' arquivoBin' = case decodificarCaractere huff' arquivoBin' of
+          (caractere, resto) -> caractere : decodificarTexto' (n - 1) huff' resto
+
+    decodificarCaractere :: Huffman -> Lazy.ByteString -> (Char, Lazy.ByteString)
+    decodificarCaractere (Folha _ simbolo) arquivoBin = (simbolo, arquivoBin)
+    decodificarCaractere (No _ esquerda direita) arquivoBin = case Lazy.head arquivoBin of
+      0 -> decodificarCaractere esquerda (Lazy.tail arquivoBin)
+      1 -> decodificarCaractere direita (Lazy.tail arquivoBin)
+      _ -> error "Caractere inválido"
