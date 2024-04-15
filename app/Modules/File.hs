@@ -111,29 +111,29 @@ decode :: String  -- ^ O caminho do arquivo a ser decodificado.
        -> IO ()   -- ^ Ação que realiza a decodificação do arquivo.
 decode arquivo = do
   arquivoBin <- Lazy.readFile arquivo
-  let (totalFrequenciaSimbolos, totalCaracteres, simbolos, huff) = Get.runGet decodificarBinario arquivoBin
+  let (totalFrequenciaSimbolos, totalCaracteres, simbolos) = Get.runGet decodificarBinario arquivoBin
 
   putStrLn $ "(decode)Total de frequência de símbolos: " ++ show totalFrequenciaSimbolos
   putStrLn $ "(decode)Total de caracteres: " ++ show totalCaracteres
   putStrLn $ "(decode)Frequência de símbolos: " ++ show simbolos
-  putStrLn $ "(decode)Arvore de Huffman: " ++ show huff
+  -- putStrLn $ "(decode)Arvore de Huffman: " ++ show huff
 
-  let textoDecodificado = decodificarTexto (fromIntegral totalCaracteres) huff arquivoBin
+  -- let textoDecodificado = decodificarTexto (fromIntegral totalCaracteres) huff arquivoBin
 
-  putStrLn $ "Texto decodificado: " ++ textoDecodificado
+  -- putStrLn $ "Texto decodificado: " ++ textoDecodificado
 
-  Lazy.writeFile (arquivo ++ ".txt") $ Lazy.pack $ map (fromIntegral . ord) textoDecodificado
+  -- Lazy.writeFile (arquivo ++ ".txt") $ Lazy.pack $ map (fromIntegral . ord) textoDecodificado
 
   where
     -- | Função auxiliar que realiza a decodificação do arquivo binário.
-    decodificarBinario :: Get (Get.Word8, Get.Word32, [(Int, Char)], Huffman)
+    decodificarBinario :: Get (Get.Word8, Get.Word32, [(Int, Char)])
     decodificarBinario = do
       totalFrequenciaSimbolos <- Get.getWord8
       totalCaracteres <- Get.getWord32be
       simbolos <- lerArquivo $ fromIntegral totalFrequenciaSimbolos
-      (huff, _) <- lerCodigos -- Adicionado aqui
+      -- (huff, _) <- lerCodigos -- Adicionado aqui
 
-      return (totalFrequenciaSimbolos, totalCaracteres, simbolos, huff)
+      return (totalFrequenciaSimbolos, totalCaracteres, simbolos)
 
     -- | Função auxiliar que lê os símbolos e suas frequências do arquivo binário.
     lerArquivo :: Int -> Get [(Int, Char)]
