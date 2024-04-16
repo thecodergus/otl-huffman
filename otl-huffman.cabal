@@ -72,7 +72,7 @@ executable otl-huffman
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:      base ^>=4.17.2.1,
+    build-depends:      base ^>=4.13.0.0,
                         containers,
                         binary,
                         bytestring,
