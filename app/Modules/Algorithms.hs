@@ -61,7 +61,7 @@ decodificar str arv = decodificar' str arv
     decodificar' ('1' : xstr) (No _ _ dir) = decodificar' xstr dir
     decodificar' [] (Folha _ c) = [c]
     decodificar' str' (Folha _ c) = c : decodificar' str' arv
-    decodificar' (p:_) (No {}) = error $ "Caractere inválido: " ++ [p]
-    decodificar'  [] (No {}) = error "Input Invalido"
+    decodificar' (p:_) No {} = error $ "Caractere inválido: " ++ [p]
+    decodificar'  [] No {} = error "Input Invalido"
 
 
