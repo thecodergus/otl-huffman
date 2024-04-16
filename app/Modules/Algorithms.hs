@@ -1,67 +1,182 @@
-module Algorithms where
-
-import Types(Huffman (Folha, No))
-import Data.Map (toList, fromListWith)
-import Data.List ( insertBy, sortBy )
-import Data.Function ( on )
-import Control.Arrow(second)
-import Data.Maybe(fromMaybe)
+module File where
 
 
--- Calcula a frequência dos símbolos em uma string e converte para uma lista de Huffman
-freqSimb :: String -> [Huffman]
-freqSimb = convert . freq
+import Algorithms
+import Types
+import Data.Binary (Put, Get)
+import qualified Data.ByteString.Lazy as Lazy
+import qualified Data.Binary.Put as Put
+import Data.ByteString (ByteString)
+import qualified Data.ByteString as ByteString
+import qualified Data.Map as Map
+import Data.Map (Map)
+import qualified Data.Binary as Get
+import qualified Data.Binary.Get as Get
+import Data.ByteString.Internal (c2w, w2c)
+import Data.Bits
+import Data.Word (Word8, Word32)
+
+
+
+
+-- | Codifica um arquivo usando o algoritmo de Huffman.
+--
+-- A função `encode` recebe o caminho de um arquivo como entrada e realiza a codificação do mesmo usando o algoritmo de Huffman.
+-- O arquivo é lido, e em seguida são calculadas as frequências dos símbolos presentes no texto.
+-- A árvore de Huffman é construída a partir das frequências dos símbolos.
+-- Em seguida, o arquivo binário é gerado com base nas informações da árvore de Huffman e das frequências dos símbolos.
+-- O arquivo binário é salvo com a extensão ".bin" no mesmo diretório do arquivo original.
+--
+-- A função `encode` é uma função de entrada e saída (IO) que não retorna nenhum valor.
+-- Ela utiliza as funções auxiliares `somarCaracteres`, `escreverArquivo`, `escreverSimbolos` e `escreverCodigos` para realizar a codificação.
+encode :: String -- ^ O caminho do arquivo a ser codificado.
+       -> IO ()  -- ^ Ação IO que realiza a codificação do arquivo.
+encode arquivo = do
+  texto <- readFile arquivo
+  let freqSimbolos = freqSimb texto
+  putStrLn $ "(encode)Frequencia de simbolos: "  ++ show (length freqSimbolos)
+  let totalCaracteres = somarCaracteres freqSimbolos
+  putStrLn $ "(encode)Total de caracteres: " ++ show totalCaracteres
+  let huff = construirArvore freqSimbolos
+
+  putStrLn $ "(encode)Frequencia de simbolos: " ++ show freqSimbolos
+  putStrLn $ "(encode)Arvore de Huffman: " ++ show huff
+
+  let textoCodificado = codificar texto huff
+
+  putStr $ "(encode)Texto Codificado: " ++ show textoCodificado
+
+  let arquivoBin = Put.runPut $ escreverArquivo (length freqSimbolos) totalCaracteres freqSimbolos textoCodificado
+  Lazy.writeFile (arquivo ++ ".bin") arquivoBin
+
+    where
+      -- | Calcula a soma das frequências dos símbolos presentes na lista de Huffman.
+      somarCaracteres :: [Huffman] -> Int
+      somarCaracteres [] = 0
+      somarCaracteres ((Folha freq _):hs) = freq + somarCaracteres hs
+      somarCaracteres ((No freq _ _):hs) = freq + somarCaracteres hs
+
+      -- | Escreve as informações do arquivo binário com base nas frequências dos símbolos e na árvore de Huffman.
+      escreverArquivo :: Int         -- ^ O total de frequências de símbolos.
+                     -> Int         -- ^ O total de caracteres no texto original.
+                     -> [Huffman]   -- ^ A lista de Huffman.
+                     -> String
+                     -> Put         -- ^ Ação Put que escreve as informações do arquivo binário.
+      escreverArquivo totalFrequenciaSimbolos totalCaracteres simbolos textoCodificado = do
+        Put.putWord8 $ toEnum totalFrequenciaSimbolos
+        Put.putWord32be $ toEnum totalCaracteres
+
+        escreverSimbolos simbolos
+        escreverTextoCodificado textoCodificado
+
+      -- | Escreve as informações dos símbolos no arquivo binário.
+      escreverSimbolos :: [Huffman] -- ^ A lista de Huffman.
+                       -> Put       -- ^ Ação Put que escreve as informações dos símbolos.
+      escreverSimbolos [] = return ()
+      escreverSimbolos ((Folha freq simbolo):hs) = do
+        Put.putWord8 $ c2w simbolo
+        Put.putWord32be $ toEnum freq
+        escreverSimbolos hs
+      escreverSimbolos (No {}:hs) = do
+        escreverSimbolos hs
+
+      escreverTextoCodificado :: String -> Put.PutM ()
+      escreverTextoCodificado [] = Put.flush
+      escreverTextoCodificado (x:xs) = do
+        Put.putWord8 $ charToBit x
+        escreverTextoCodificado xs
+        where
+          charToBit :: Char -> Word8
+          charToBit '0' = 0
+          charToBit '1' = 1
+          charToBit _ = error "Input should be '0' or '1'"
+
+
+
+-- | Função responsável por decodificar um arquivo comprimido usando o algoritmo de Huffman.
+-- A função recebe o caminho do arquivo a ser decodificado e realiza as seguintes etapas:
+-- 1. Lê o arquivo binário.
+-- 2. Extrai as informações necessárias do cabeçalho do arquivo.
+-- 3. Decodifica o texto comprimido usando a árvore de Huffman.
+-- 4. Escreve o texto decodificado em um novo arquivo.
+--
+-- A função retorna um valor do tipo `IO ()`, indicando que a operação é realizada no contexto de I/O.
+decode :: String  -- ^ O caminho do arquivo a ser decodificado.
+       -> IO ()   -- ^ Ação que realiza a decodificação do arquivo.
+decode arquivo = do
+  arquivoBin <- Lazy.readFile arquivo
+  let (totalFrequenciaSimbolos, totalCaracteres, simbolos) = Get.runGet decodificarBinario arquivoBin
+
+  putStrLn $ "(decode)Total de frequência de símbolos: " ++ show totalFrequenciaSimbolos
+  putStrLn $ "(decode)Total de caracteres: " ++ show totalCaracteres
+  putStrLn $ "(decode)Frequência de símbolos: " ++ show simbolos
+  -- putStrLn $ "(decode)Arvore de Huffman: " ++ show huff
+
+  -- let textoDecodificado = decodificarTexto (fromIntegral totalCaracteres) huff arquivoBin
+
+  -- putStrLn $ "Texto decodificado: " ++ textoDecodificado
+
+  -- Lazy.writeFile (arquivo ++ ".txt") $ Lazy.pack $ map (fromIntegral . ord) textoDecodificado
+
   where
-    -- Calcula a frequência dos caracteres em uma string
-    freq :: String -> [(Char, Int)]
-    freq = toList . fromListWith (+) . map (flip (,) 1)
+    -- | Função auxiliar que realiza a decodificação do arquivo binário.
+    decodificarBinario :: Get (Word8, Word32, [(Int, Char)])
+    decodificarBinario = do
+      totalFrequenciaSimbolos <- Get.getWord8
+      totalCaracteres <- Get.getWord32be
+      simbolos <- lerArquivo $ fromIntegral totalFrequenciaSimbolos
+      -- (huff, _) <- lerCodigos -- Adicionado aqui
 
-    -- Converte uma lista de tuplas (caractere, frequência) em uma lista de Huffman
-    convert :: [(Char, Int)] -> [Huffman]
-    convert = map (\(a, b) -> Folha b a) . sortBy (compare `on` snd)
+      return (totalFrequenciaSimbolos, totalCaracteres, simbolos)
 
+    -- | Função auxiliar que lê os símbolos e suas frequências do arquivo binário.
+    lerArquivo :: Int -> Get [(Int, Char)]
+    lerArquivo 0 = return []
+    lerArquivo n = do
+      simbolo <- Get.getWord8
+      freq <- Get.getWord32be
+      resto <- lerArquivo (n - 1)
+      return $ (fromIntegral freq, w2c simbolo) : resto
 
--- Constrói uma árvore Huffman a partir de uma lista de Huffman
-construirArvore :: [Huffman] -> Huffman
-construirArvore [] = error "Lista vazia"
-construirArvore [t] = t
-construirArvore (a : b : cs) = construirArvore $ insertBy (compare `on` weight) (No (weight a + weight b) a b) cs
-  where
-    -- Obtém o peso de um nó Huffman
-    weight :: Huffman -> Int
-    weight (Folha w _) = w
-    weight (No w _ _) = w
+    -- | Função auxiliar que lê os códigos dos símbolos do arquivo binário.
+    lerCodigos :: Get (Huffman, Map Char ByteString)
+    lerCodigos = do
+      simbolo <- Get.getWord8
+      tamanhoCodigo <- Get.getWord8
+      codigo <- Get.getByteString $ fromIntegral tamanhoCodigo
+      let huff = Folha (ByteString.length codigo) (w2c simbolo)
+      let codigos = Map.singleton (w2c simbolo) codigo
+      if simbolo == 0 && tamanhoCodigo == 0
+        then return (huff, codigos)
+        else do
+          (huffResto, codigosResto) <- lerCodigos
+          return (No (weight huff + weight huffResto) huff huffResto, Map.union codigos codigosResto)
+      where
+        weight :: Huffman -> Int
+        weight (Folha w _) = w
+        weight (No w _ _) = w
 
+    -- | Função auxiliar que decodifica o texto comprimido usando a árvore de Huffman.
+    decodificarTexto :: Int               -- ^ O número total de caracteres a serem decodificados.
+                     -> Huffman          -- ^ A árvore de Huffman.
+                     -> Lazy.ByteString  -- ^ O texto comprimido em formato binário.
+                     -> String           -- ^ O texto decodificado.
+    decodificarTexto totalCaracteres huff arquivoBin = decodificarTexto' totalCaracteres huff arquivoBin
+      where
+        decodificarTexto' :: Int               -- ^ O número total de caracteres a serem decodificados.
+                          -> Huffman          -- ^ A árvore de Huffman.
+                          -> Lazy.ByteString  -- ^ O texto comprimido em formato binário.
+                          -> String           -- ^ O texto decodificado.
+        decodificarTexto' 0 _ _ = ""
+        decodificarTexto' n huff' arquivoBin' = case decodificarCaractere huff' arquivoBin' of
+          (caractere, resto) -> caractere : decodificarTexto' (n - 1) huff' resto
 
--- Mapeia os caracteres para seus códigos Huffman
-codHumman :: Huffman -> [(Char, String)]
-codHumman (Folha _ c) = [(c, "")]
-codHumman (No _ e d) = map (second ('0' :)) (codHumman e) ++ map (second ('1' :)) (codHumman d)
-
--- Codifica uma string usando a árvore Huffman
-codificar :: String -> Huffman -> String
-codificar s h = concatMap (`lookup'` cod) s
-  where
-    -- Mapeia os caracteres para seus códigos Huffman
-    cod = codHumman h
-
-    -- Função complementar para fazer a busca de um caractere no mapeamento
-    lookup' c = fromMaybe (error "Caractere não encontrado") . lookup c
-
--- Decodifica uma string usando a árvore Huffman
-decodificar :: String -> Huffman -> String
-decodificar str arv = decodificar' str arv
-  where
-    -- Função complementar para decodificar uma string usando a árvore Huffman
-    -- esta função é recursiva e é chamada pela função decodificar
-    -- ela percorre a árvore Huffman de acordo com a string de entrada
-    -- e retorna a string decodificada
-    decodificar' :: String -> Huffman -> String
-    decodificar' ('0' : xstr) (No _ esq _) = decodificar' xstr esq
-    decodificar' ('1' : xstr) (No _ _ dir) = decodificar' xstr dir
-    decodificar' [] (Folha _ c) = [c]
-    decodificar' str' (Folha _ c) = c : decodificar' str' arv
-    decodificar' (p:_) No {} = error $ "Caractere inválido: " ++ [p]
-    decodificar'  [] No {} = error "Input Invalido"
-
-
+    -- | Função auxiliar que decodifica um caractere usando a árvore de Huffman.
+    decodificarCaractere :: Huffman          -- ^ A árvore de Huffman.
+                         -> Lazy.ByteString  -- ^ O texto comprimido em formato binário.
+                         -> (Char, Lazy.ByteString)  -- ^ O caractere decodificado e o restante do texto.
+    decodificarCaractere (Folha _ simbolo) arquivoBin = (simbolo, arquivoBin)
+    decodificarCaractere (No _ esquerda direita) arquivoBin = case Lazy.head arquivoBin of
+      0 -> decodificarCaractere esquerda (Lazy.tail arquivoBin)
+      1 -> decodificarCaractere direita (Lazy.tail arquivoBin)
+      _ -> error "Caractere inválido"
